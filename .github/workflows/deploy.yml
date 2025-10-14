@@ -36,7 +36,7 @@ jobs:
         # Falls du eine server.js Datei hast, kopiere sie auch.
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 # ✅ HIER v3 zu v4 ÄNDERN
       with:
         name: build-artifact
         path: deploy-package/
@@ -49,7 +49,7 @@ jobs:
 
     steps:
     - name: Download Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/upload-artifact@v4 # ✅ HIER v3 zu v4 ÄNDERN
       with:
         name: build-artifact
         path: build-artifact/
