@@ -9,7 +9,6 @@ jobs:
   # --- Job 1: Die Anwendung bauen ---
   build:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -17,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '22' # Oder deine bevorzugte Version
+        node-version: '22'
         cache: 'npm'
 
     - name: Install Dependencies
@@ -26,30 +25,25 @@ jobs:
     - name: Build Application
       run: npm run build
 
-    - name: Prepare Artifact
-      run: |
-        mkdir -p deploy-package
-        cp -R .next deploy-package/
-        cp -R node_modules deploy-package/
-        cp package.json deploy-package/
-        # Falls du eine .env.production Datei hast, kopiere sie nicht! Die liegt auf dem Server.
-        # Falls du eine server.js Datei hast, kopiere sie auch.
-
+    # ✅ WICHTIGE ÄNDERUNG: Wir packen node_modules NICHT mehr in das Artefakt!
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4 # ✅ HIER v3 zu v4 ÄNDERN
+      uses: actions/upload-artifact@v4
       with:
         name: build-artifact
-        path: deploy-package/
+        path: |
+          .next
+          public
+          package.json
+          package-lock.json
+          next.config.js
 
   # --- Job 2: Das gebaute Artefakt auf den VPS deployen ---
   deploy:
-    # Dieser Job startet erst, wenn 'build' erfolgreich war
     needs: build
     runs-on: ubuntu-latest
-
     steps:
     - name: Download Artifact
-      uses: actions/download-artifact@v4 # ✅ Correct
+      uses: actions/download-artifact@v4
       with:
         name: build-artifact
         path: build-artifact/
@@ -64,7 +58,7 @@ jobs:
         remote_user: ${{ secrets.VPS_USERNAME }}
         remote_key: ${{ secrets.VPS_SSH_KEY }}
 
-    - name: Restart Application on VPS
+    - name: Install Dependencies and Restart App on VPS
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.VPS_HOST }}
@@ -72,8 +66,14 @@ jobs:
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
           cd /var/www/tinyllm
-          # NVM laden, falls PM2 es braucht
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-          # App neustarten
-          pm2 start npm --name tinyllm -- run start || pm2 restart tinyllm
+          
+          # ✅ WICHTIGE ÄNDERUNG: Abhängigkeiten auf dem Server installieren
+          # --production installiert nur die für den Betrieb nötigen Pakete, keine devDependencies
+          echo "-----> Installing production dependencies on server..."
+          npm install --production
+          
+          # App neustarten oder zum ersten Mal starten
+          echo "-----> Restarting application with PM2..."
+          pm2 restart tinyllm || pm2 start npm --name "tinyllm" -- run start
