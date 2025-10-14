@@ -13,15 +13,26 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Deploy to VPS via SSH
+    - name: Deploy to VPS
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.VPS_HOST }} # IP-Adresse deines Servers
-        username: ${{ secrets.VPS_USERNAME }} # Dein Benutzername auf dem VPS
-        key: ${{ secrets.VPS_SSH_KEY }} # Dein privater SSH-Key für den Server-Login
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
         script: |
+          # Gehe ins Projektverzeichnis
           cd /var/www/tinyllm
+      
+          # Hole den neuesten Code
           git pull origin main
+      
+          # ------------------ LÖSUNG ------------------
+          # Lade nvm und die korrekte Node.js-Umgebung
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          # ---------------------------------------------
+          
+          # Führe jetzt die Befehle aus
           npm install
-          npm run build # Für Next.js oder Astro
-          pm2 restart meine-app # Starte die App mit PM2 neu
+          npm run build
+          pm2 restart tinyllm
