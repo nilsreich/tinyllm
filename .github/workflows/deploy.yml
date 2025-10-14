@@ -76,4 +76,4 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           # App neustarten
-          pm2 restart tinyllm
+          pm2 start npm --name tinyllm -- run start || pm2 restart tinyllm
